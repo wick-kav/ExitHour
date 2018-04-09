@@ -1,4 +1,4 @@
-var calculateExitTIme = function(){
+var calculateExitTime = function(){
 	var targetTime = document.getElementById('time').value+':00.0';
 	chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
 		chrome.tabs.sendMessage(tabs[0].id, {targetTime: targetTime}, function(response) {
@@ -6,6 +6,5 @@ var calculateExitTIme = function(){
 		});
 	});
 }
-
-document.getElementById('calculateButton').onclick = calculateExitTIme;
+document.getElementById('calculateButton').onclick = calculateExitTime;
 

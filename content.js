@@ -1,21 +1,22 @@
 ﻿const getPresencesRestService = new RestService("https://srm2.netsitech.com/srmrest/api/presences", "GET");
 
-var RestService = function(url, method){
+function RestService (url, method){
 	this.url = url;
 	this.method = method;
 	
-	function getURL(){
+	this.getURL = function(){
 		return url;
 	}
 	
-	function getMethod(){
+	this.getMethod = function(){
 		return method;
 	}
 }
 
 var token = null;
+var exitTime = null;
 
-var processPresences = function(data, targetTime, response) {
+var processPresences = function(data, targetTime) {
 	targetTime = hmsToSecondsOnly(targetTime); 	// hh:mm:ss => (hh) * 3600 + mm * 60 + ss
 	var secondsPause = 0; 						// durata della pausa in secondi
 
@@ -39,6 +40,13 @@ function comparePresences(a, b) {
 	return (a && b && a.begin && b.begin) ? a.begin.localeCompare(b.begin) : 1;
 }
 
+function isCheckSecurityTokenCreated(){
+	if(token == null){
+		retrieveSecurityToken();
+	}
+	return token == null ? false : true;
+}
+
 function retrieveSecurityToken(){
 	var data = sessionStorage.getItem('userContext');
 	data = JSON.parse(data);
@@ -48,7 +56,7 @@ function retrieveSecurityToken(){
 	}
 }
 
-function retrievePresencesInfo(responseData, targetTime) {
+function retrievePresencesInfo(targetTime) {
 	if(!token){
 		retrieveSecurityToken();
 	}
@@ -63,7 +71,7 @@ function retrievePresencesInfo(responseData, targetTime) {
 			xhr.setRequestHeader('X-SRM-Token', token);
 		},
 		success : function(data) {
-			responseData = data;
+			processPresences(data, targetTime);
 		},
 		error : function(data) {
 			console.log("Errore: " + JSON.stringify(data));
@@ -88,7 +96,7 @@ function hmsToSecondsOnly(str) {
 }
 
 function getTodayStringRepresentation() {
-	var mock = true;
+	var mock = false;
 	if(mock){
 		return '2018-03-30';
 	}else{
@@ -104,7 +112,9 @@ function getTodayStringRepresentation() {
 chrome.runtime.onMessage.addListener(
   function(request, sender, sendResponse) {
 	  if (isCheckSecurityTokenCreated()) {
-		  var targetTime = retrievePresencesInfo(processPresences, request.targetTime);
+		  var targetTime = retrievePresencesInfo(request.targetTime);
 		  sendResponse({targetTime : exitTime});
+	  }else{
+		  sendResponse({targetTime : "NA"});
 	  }
   });
