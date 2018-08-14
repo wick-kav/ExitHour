@@ -1,15 +1,27 @@
-﻿const getPresencesRestService = new RestService("https://srm2.netsitech.com/srmrest/api/presences", "GET");
+﻿const HttpGETPresencesRestService = new SrmRestService("https://srm2.netsitech.com/srmrest/api/presences", "GET");
 
-function RestService (url, method){
+function SrmRestService (url, method){
 	this.url = url;
 	this.method = method;
-	
+	this.header = new Object()
+
 	this.getURL = function(){
 		return url;
 	}
 	
 	this.getMethod = function(){
 		return method;
+	}
+
+	this.header.getName = function(){
+		return 'X-SRM-Token';
+	}
+	this.header.getValue = function(){
+		return token;
+	}
+	
+	this.getHeader = function(){
+		return this.header;
 	}
 }
 
@@ -61,16 +73,17 @@ function retrievePresencesInfo(targetTime) {
 		retrieveSecurityToken();
 	}
 	$.ajax({
-		url : getPresencesRestService.getURL(),
+		url : HttpGETPresencesRestService.getURL(),
 		data : {
 			date : getTodayStringRepresentation(),
 			time : (new Date).getTime()
 		},
-		type : getPresencesRestService.getMethod(),
+		type : HttpGETPresencesRestService.getMethod(),
 		beforeSend : function(xhr) {
 			xhr.setRequestHeader('X-SRM-Token', token);
 		},
 		success : function(data) {
+			return  data;
 			processPresences(data, targetTime);
 		},
 		error : function(data) {
@@ -108,12 +121,34 @@ function getTodayStringRepresentation() {
 	}
 }
 
+function SRMRequest(GenericSrmRestService, foo, params){
+	if(GenericSrmRestService instanceof SrmRestService){
+		
+		var xhr = new XMLHttpRequest();
+		xhr.open(GenericSrmRestService.getMethod(), GenericSrmRestService.getURL(), true);
+		xhr.setRequestHeader(GenericSrmRestService.getHeader().getName(), GenericSrmRestService.getHeader().getValue());
+		xhr.onreadystatechange = function() {
+			//ReadyState.4 == DONE
+			if (xhr.readyState == 4) {
+				console.log("Eseguo la funzione: " + foo.name);
+				foo();
+			}
+		}
+		xhr.send(params);
+	}else{
+		console.log("Il parametro non e' istanza di SrmRestService");
+	}
+}
+
 
 chrome.runtime.onMessage.addListener(
   function(request, sender, sendResponse) {
 	  if (isCheckSecurityTokenCreated()) {
-		  var targetTime = retrievePresencesInfo(request.targetTime);
-		  sendResponse({targetTime : exitTime});
+		  console.log("Target time: " + request.targetTime)
+//		  var presences = retrievePresencesInfo(request.targetTime);
+//		  var presences = retrieveSecurityToken();+
+		  SRMRequest(HttpGETPresencesRestService, bestemmia, JSON.stringify({"date" : getTodayStringRepresentation()}));
+		  sendResponse({targetTime : presences});
 	  }else{
 		  sendResponse({targetTime : "NA"});
 	  }
